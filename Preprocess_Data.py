@@ -37,8 +37,13 @@ def Preprocess_Text(text):
     words = text.split()
 
     #REMOVE STOPWORDS AND LEMMATIZE
-    words = [lemmatizer.lemmatize(word) for word in words if word not in stop_words]
-    return ' '.join(words)
+    processed_words = []
+
+    for word in words:
+        if word not in stop_words:
+            processed_words.append(lemmatizer.lemmatize(word))
+    
+    return ' '.join(processed_words)
 
 
 dataset = Get_Dataset()
