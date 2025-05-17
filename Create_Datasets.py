@@ -18,6 +18,16 @@ def Merge_Datasets():
     return dataset.sample(frac=1).reset_index(drop=True)
 
 
+#REMOVES ALL ROWS WHERE THE TEXT VALUE IS EMPTY
+def Remove_Empty_Text(dataset):
+
+    empty = []
+    for i, row in dataset.iterrows():
+        if row['text'].strip() == "": empty.append(i)
+
+    return dataset.drop(empty, axis='index')
+   
+
 #WE'RE USING A 60-20-20 SPLIT
 def Split_Dataset(dataset):
 
@@ -29,8 +39,8 @@ def Split_Dataset(dataset):
 
 
 dataset = Merge_Datasets()
+dataset = Remove_Empty_Text(dataset)
 training_data, test_data, validation_data = Split_Dataset(dataset)
-
 
 #SAVING OUR DATASETS AS NEW CSVS SO WE DON'T HAVE TO MERGE AND EVERY TIME
 training_data.to_csv("Training.csv", index=False)
