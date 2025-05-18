@@ -1,5 +1,11 @@
 import pandas as pd
-import numpy as np
+import pickle
+from torch.utils.data import random_split
+
+
+#THE FOLDERS WHERE OUR DATASET WILL BE SAVED
+PKL_PATH = "Pickled_data/"
+READABLES = "Readables/"
 
 
 #MERGES AND SHUFFLES FAKE AND REAL NEWS CSVS 
@@ -30,19 +36,32 @@ def Remove_Empty_Text(dataset):
 
 #WE'RE USING A 60-20-20 SPLIT
 def Split_Dataset(dataset):
+    return random_split(dataset, [0.6, 0.2, 0.2])
 
-    n = len(dataset)
+   
+#SAVES DATA AS PKL FILE SO WE DON'T HAVE TO KEEP MERGING AND REMOVING EMPTY TEXT
+def Save_Merged_Data(dataset):
+    with open(f'{PKL_PATH}Merged.pkl', 'wb') as f:
+        pickle.dump(dataset, f)
 
-    return np.split(
-        dataset.sample(frac=1, random_state=42),
-        [int(0.6*n), int(0.8*n)])
+
+#LOADS DATA FROM PKL FILES
+def Load_Merged_Data():
+    with open(f'{PKL_PATH}Merged.pkl', 'rb') as f:
+        merged_dataset = pickle.load(f)
+
+    return merged_dataset
 
 
-dataset = Merge_Datasets()
-dataset = Remove_Empty_Text(dataset)
-training_data, test_data, validation_data = Split_Dataset(dataset)
+def Create_Dataset():
+    
+    dataset = Merge_Datasets()
+    dataset = Remove_Empty_Text(dataset)
+    Save_Merged_Data(dataset)
 
-#SAVING OUR DATASETS AS NEW CSVS SO WE DON'T HAVE TO MERGE AND EVERY TIME
-training_data.to_csv("Training.csv", index=False)
-test_data.to_csv("Test.csv", index=False)
-validation_data.to_csv("Validation.csv", index=False)
+    #SAVING OUR DATASET AS A NEW CSV SO IT BECOMES HUMAN-READABLE
+    dataset.to_csv(f"{READABLES}Merged.csv", index=False)
+
+
+#RUN THIS IF YOU DON'T HAVE THE PKL FILE FOR THE MERGED DATASET
+#Create_Dataset()
