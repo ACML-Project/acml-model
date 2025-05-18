@@ -137,12 +137,17 @@ def Preprocess_Data():
 
     Save_Data(encoded_data, vocab)
 
-    #CREATES OUTPUT FILES TO VIEW DATA AND VOCAB. GOOD LUCK OPENING IT - IT'S HUGE
+
+#CREATES OUTPUT FILES TO VIEW DATA AND VOCAB. GOOD LUCK OPENING IT - IT'S HUGE
+def Create_Readable_Text(unprocessed, vocab, encoding):
+
+    with open(f"{READABLES}unprocessed.txt", "w") as f:
+        print(unprocessed, file=f)
     with open(f"{READABLES}vocab.txt", "w") as f:
         print(vocab, file=f)
     with open(f"{READABLES}encoded_data.txt", "w") as f:
-        print(encoded_data, file=f)
+        print(encoding, file=f)
 
-    
+
 #RUN THIS IF YOU DON'T HAVE THE PKL FILES FOR ENCODINGS AND VOCAB
 #Preprocess_Data()

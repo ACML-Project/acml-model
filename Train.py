@@ -1,8 +1,8 @@
-from Create_Datasets import Split_Dataset, Load_Merged_Data, READABLES
+from Create_Datasets import Split_Dataset, Load_Merged_Data
 from LSTM import LSTM, EMBEDDING_DIM
 import numpy as np
 import pandas as pd
-from Preprocessing import Preprocess_Data, Load_Data
+from Preprocessing import Load_Data, Create_Readable_Text
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -22,6 +22,9 @@ DROP_OUT = 0.3
 #GET DATA
 unprocessed_data = Load_Merged_Data() 
 encoded_data, vocab = Load_Data()
+
+#IF YOU WANT TO READ DATA
+#Create_Readable_Text(unprocessed=unprocessed_data, encoding=encoded_data, vocab=vocab)
 
 labels = torch.tensor(unprocessed_data['label'].values, dtype = torch.long)
 inputs = torch.tensor(encoded_data, dtype = torch.long)
