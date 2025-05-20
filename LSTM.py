@@ -15,17 +15,17 @@ class LSTM(nn.Module):
         
         self.lstm = nn.LSTM(
             batch_first = True,
-            dropout = dropout,
+            #dropout = dropout,
             hidden_size = hidden_size,
             input_size = embedding_dim, #NEEDS TO MATCH EMBEDDING VECTOR'S DIMENSIONS
             num_layers = num_recurrent_layers 
         )
 
-        self.output_layer = nn.Linear(hidden_size, output_size)
+        self.output_vals = nn.Linear(hidden_size, output_size)
 
 
     def forward(self, input, hidden_in, memory_in):
 
         input_embeddings = self.embedding(input)
         output, (hidden_out, memory_out) = self.lstm(input_embeddings, (hidden_in, memory_in))
-        return self.output_layer(output), hidden_out, memory_out
+        return self.output_vals(output), hidden_out, memory_out

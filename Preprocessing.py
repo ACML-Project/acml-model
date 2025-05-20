@@ -9,12 +9,15 @@ import torch
 import re
 
 
-MAX_ARTICLE_LEN = 512 #HYPERPARMETER TUNING
 SPECIAL_TOKENS = ['<pad>', '<sos>', '<eos>', '<unk>']
 PAD_INDEX = 0
 SOS_INDEX = 1
 EOS_INDEX = 2
 UNK_INDEX = 3
+
+#HYPERPARMETER TUNING
+MAX_ARTICLE_LEN = 512
+MIN_VOCAB_FREQ = 3
 
 
 def Preprocess_Text(text):
@@ -66,7 +69,7 @@ def Build_Vocab(tokenized_text):
             else: vocab[token] = vocab.get(token) + 1
 
     #REMOVE WORDS THAT DON'T APPEAR OFTEN
-    vocab = [ token for token, i in vocab.items() if token in SPECIAL_TOKENS or i > 2 ]
+    vocab = [ token for token, i in vocab.items() if token in SPECIAL_TOKENS or i >= MIN_VOCAB_FREQ ]
 
     #RETURN AN ENUMERATED VOCAB
     return { vocab[i] : i for i in range( len(vocab) ) }

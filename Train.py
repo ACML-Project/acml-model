@@ -4,17 +4,17 @@ from Preprocessing import Load_Data, Create_Readable_Text
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
-from sklearn.metrics import classification_report
+from sklearn.metrics import accuracy_score, classification_report
 
 
 #HYPERPARMETER TUNING
 BATCH_SIZE = 32
-DROP_OUT = 0.5
+#DROP_OUT = 0.5 #ONLY NECESSARY IF USING A STACKED LSTM
 EMBEDDING_DIM = 128 #SIZE OF THE VECTOR FOR EACH EMBEDDING
-HIDDEN_SIZE = 64 #NUMBER OF FEATURES FOR THE HIDDEN STATE
-LEARNING_RATE = 0.001
+HIDDEN_SIZE = 128 #NUMBER OF FEATURES FOR THE HIDDEN STATE
+LEARNING_RATE = 0.005
 NUM_EPOCHS = 10
-NUM_RECURRENT_LAYERS = 2 #CREATES A STACKED LSTM IF >1. 
+NUM_RECURRENT_LAYERS = 1 #CREATES A STACKED LSTM IF >1. 
 
 
 #GET DATA FROM PICKLE JAR
@@ -33,11 +33,12 @@ training_data, validation_data, test_data = Split_Dataset(dataset)
 device = torch.device(1 if torch.cuda.is_available() else 'cpu')
 
 #DATALOADERS MAKE IT EASIER TO LOAD AND PROCESS LARGE DATASETS IN PARALLEL
-training_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=True)
+training_loader = DataLoader(dataset=training_data, batch_size=BATCH_SIZE, shuffle=True)
 validation_loader = DataLoader(dataset=validation_data, batch_size=BATCH_SIZE, shuffle=True)
+test_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=True)
 
 lstm = LSTM(
-    dropout = DROP_OUT,
+    dropout = None, #DROP_OUT, CHANGE IN LSTM.PY
     embedding_dim = EMBEDDING_DIM,
     hidden_size = HIDDEN_SIZE,
     num_recurrent_layers = NUM_RECURRENT_LAYERS,
@@ -45,6 +46,7 @@ lstm = LSTM(
     len_vocab = len(vocab),
 ).to(device)
 
+nn.Module.compile(lstm) #SHOULD MAKE COMPUTATION FASTER
 loss_fn = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(lstm.parameters(), lr = LEARNING_RATE)
 best_accuracy = 0
