@@ -7,8 +7,8 @@ import pandas as pd
 import pickle
 import torch
 import re
-
-
+import matplotlib.pyplot as plt
+import numpy as np
 SPECIAL_TOKENS = ['<pad>', '<sos>', '<eos>', '<unk>']
 PAD_INDEX = 0
 SOS_INDEX = 1
@@ -134,6 +134,46 @@ def Preprocess_Data():
     
     dataset = Load_Merged_Data()
     processed_data = dataset['text'].apply(Preprocess_Text)
+    
+    token_lists = dataset["text"].astype(str).apply(Preprocess_Text)
+    token_lengths = token_lists.apply(len)
+    mean_len = np.mean(token_lengths)
+    median_len = np.median(token_lengths)
+    percentile_90 = np.percentile(token_lengths, 90)
+    # plt.figure(figsize=(12, 6))  
+    # plt.hist(token_lengths, bins=20, color='blue', edgecolor='black') 
+    # plt.axvline(percentile_90, color='red', linestyle='--', linewidth=2, label='90th Percentile')
+
+    # plt.title("Distribution of Token Counts per Article")
+    # plt.xlabel("Number of Tokens")  
+    # plt.ylabel("Number of Articles")  
+    plt.figure(figsize=(12, 6))
+    # Sample every 100th article to make it readable
+    sample_indices = range(0, len(token_lengths), 100)
+    sample_lengths = [token_lengths.iloc[i] for i in sample_indices]
+
+    plt.bar(sample_indices, sample_lengths, width=80, alpha=0.7)
+
+    
+    plt.axhline(mean_len, color='green', linestyle='--', linewidth=2, label=f'Mean: {mean_len:.1f}')
+    plt.axhline(median_len, color='orange', linestyle='--', linewidth=2, label=f'Median: {median_len:.1f}')
+    plt.axhline(percentile_90, color='red', linestyle='--', linewidth=2, label=f'90th Percentile: {percentile_90:.1f}')
+
+    plt.title(" Count per Article (Bar Plot - Every 100th Article)")
+    plt.xlabel("Article Number")
+    plt.ylabel("Number of Tokens")
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.tight_layout()
+    plt.show()
+
+ 
+    print("Mean:", mean_len)
+    print("Median:", median_len)
+    print("90th Percentile:", percentile_90)
+
+    
+
     vocab = Build_Vocab(processed_data)
     processed_data = Add_Padding(processed_data)
     encoded_data = Encode_Data(processed_data, vocab)
@@ -141,6 +181,13 @@ def Preprocess_Data():
     Save_Data(encoded_data, vocab)
 
 
+  
+
+  
+
+    mean_len = np.mean(token_lengths)
+    median_len = np.median(token_lengths)
+    percentile_90 = np.percentile(token_lengths, 90)
 #CREATES OUTPUT FILES TO VIEW DATA AND VOCAB. GOOD LUCK OPENING IT - IT'S HUGE
 def Create_Readable_Text(unprocessed, vocab, encoding):
 
@@ -153,4 +200,4 @@ def Create_Readable_Text(unprocessed, vocab, encoding):
 
 
 #RUN THIS IF YOU DON'T HAVE THE PKL FILES FOR ENCODINGS AND VOCAB
-#Preprocess_Data()
+Preprocess_Data()
