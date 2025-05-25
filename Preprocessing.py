@@ -3,17 +3,14 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import sent_tokenize, word_tokenize
-import pandas as pd
 import pickle
-import torch
 import re
 
 
-SPECIAL_TOKENS = ['<pad>', '<sos>', '<eos>', '<unk>']
+SPECIAL_TOKENS = ['<pad>', '<eos>', '<unk>']
 PAD_INDEX = 0
-SOS_INDEX = 1
-EOS_INDEX = 2
-UNK_INDEX = 3
+EOS_INDEX = 1
+UNK_INDEX = 2
 
 #HYPERPARMETER TUNING
 MAX_ARTICLE_LEN = 512
@@ -44,8 +41,8 @@ def Preprocess_Text(text):
             if word not in stop_words:
                processed_words.append(lemmatizer.lemmatize(word))
 
-        #ADD START- AND END-OF-SENTENCE MARKERS
-        processed_words = [ SPECIAL_TOKENS[SOS_INDEX] ] + processed_words + [ SPECIAL_TOKENS[EOS_INDEX] ]
+        #ADD END-OF-SENTENCE MARKERS
+        processed_words = processed_words + [ SPECIAL_TOKENS[EOS_INDEX] ]
         
         for word in processed_words:
             processed_text.append(word)
@@ -153,4 +150,4 @@ def Create_Readable_Text(unprocessed, vocab, encoding):
 
 
 #RUN THIS IF YOU DON'T HAVE THE PKL FILES FOR ENCODINGS AND VOCAB
-#Preprocess_Data()
+Preprocess_Data()

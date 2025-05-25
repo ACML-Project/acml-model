@@ -1,4 +1,5 @@
 from Create_Datasets import Split_Dataset, Load_Merged_Data
+from Helper_Functions import Early_Stopping_Required
 from LSTM import LSTM
 from Preprocessing import Load_Data, Create_Readable_Text
 import torch
@@ -9,12 +10,12 @@ from sklearn.metrics import accuracy_score, classification_report
 
 #HYPERPARMETER TUNING
 BATCH_SIZE = 32
-#DROP_OUT = 0.5 #ONLY NECESSARY IF USING A STACKED LSTM
+DROP_OUT = 0.5 #ONLY NECESSARY IF USING A STACKED LSTM
 EMBEDDING_DIM = 128 #SIZE OF THE VECTOR FOR EACH EMBEDDING
 HIDDEN_SIZE = 128 #NUMBER OF FEATURES FOR THE HIDDEN STATE
 LEARNING_RATE = 0.005
 NUM_EPOCHS = 10
-NUM_RECURRENT_LAYERS = 1 #CREATES A STACKED LSTM IF >1. 
+NUM_RECURRENT_LAYERS = 3 #CREATES A STACKED LSTM IF >1. 
 
 
 #GET DATA FROM PICKLE JAR
@@ -22,7 +23,7 @@ unprocessed_data = Load_Merged_Data()
 encoded_data, vocab = Load_Data()
 
 #IF YOU WANT TO READ DATA
-#Create_Readable_Text(unprocessed=unprocessed_data, encoding=encoded_data, vocab=vocab)
+Create_Readable_Text(unprocessed=unprocessed_data, encoding=encoded_data, vocab=vocab)
 
 #CREATES TENSORS FOR THE BINARY LABELS (FAKE/REAL NEWS) AND FOR THE ENCODED TEXT
 labels = torch.tensor(unprocessed_data['label'].values, dtype = torch.long)
@@ -47,8 +48,9 @@ lstm = LSTM(
 ).to(device)
 
 nn.Module.compile(lstm) #SHOULD MAKE COMPUTATION FASTER
-loss_fn = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(lstm.parameters(), lr = LEARNING_RATE)
+nn.utils.clip_grad_norm_(lstm.parameters(), max_norm=1)
+loss_fn = nn.CrossEntropyLoss(weight=torch.tensor([1, 2]))
+optimizer = torch.optim.Adam(lstm.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
 best_accuracy = 0
 
 
@@ -94,6 +96,8 @@ for epoch in range(NUM_EPOCHS):
     #FOR CLASSIFICATION REPORT
     all_predictions = []
     all_labels = []
+
+    epochs_no_improve = 0
     
     with torch.no_grad():
         for inputs, labels in validation_loader:
@@ -128,12 +132,16 @@ for epoch in range(NUM_EPOCHS):
     print(f'Epoch {epoch + 1}/{NUM_EPOCHS}:')
     print(f'Train Loss: {training_loss:.4f} | Acc: {training_accuracy:.2f}%')
     print(f'Val Loss: {validation_loss:.4f} | Acc: {validation_accuracy:.2f}%\n')
+
+    early_stopping, epochs_no_improve = Early_Stopping_Required(validation_loss)
     
     #SAVE THE BEST MODEL
     if validation_accuracy > best_accuracy:
         best_accuracy = validation_accuracy
         torch.save(lstm.state_dict(), 'best_model.pth')
         print("New best model\n")
+
+    
 
 
 #FINAL EVALUATION AND CLASSIFICATION REPORT

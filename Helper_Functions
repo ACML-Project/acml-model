@@ -1,0 +1,16 @@
+
+
+PATIENCE = 3
+
+
+def Early_Stopping_Required(curr_loss, best_loss, num_epochs):
+
+    if curr_loss < best_loss: return False, 0
+    
+    else: 
+
+        if num_epochs != PATIENCE:
+            num_epochs += 1
+            return False, num_epochs
+        
+        else: return True, 0
