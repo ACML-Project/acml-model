@@ -1,5 +1,5 @@
 from Create_Datasets import Split_Dataset, Load_Merged_Data
-from Helper_Functions import Early_Stopping_Required
+#from Helper_Functions import Early_Stopping_Required
 from LSTM import LSTM
 from Preprocessing import Load_Data, Create_Readable_Text
 import torch
@@ -15,7 +15,7 @@ EMBEDDING_DIM = 128 #SIZE OF THE VECTOR FOR EACH EMBEDDING
 HIDDEN_SIZE = 128 #NUMBER OF FEATURES FOR THE HIDDEN STATE
 LEARNING_RATE = 0.005
 NUM_EPOCHS = 10
-NUM_RECURRENT_LAYERS = 3 #CREATES A STACKED LSTM IF >1. 
+NUM_RECURRENT_LAYERS = 2 #CREATES A STACKED LSTM IF >1. 
 
 
 #GET DATA FROM PICKLE JAR
@@ -49,7 +49,7 @@ lstm = LSTM(
 
 nn.Module.compile(lstm) #SHOULD MAKE COMPUTATION FASTER
 nn.utils.clip_grad_norm_(lstm.parameters(), max_norm=1)
-loss_fn = nn.CrossEntropyLoss(weight=torch.tensor([1, 2]))
+loss_fn = nn.CrossEntropyLoss()#weight=torch.tensor([1.0, 2.0])
 optimizer = torch.optim.Adam(lstm.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
 best_accuracy = 0
 
@@ -133,7 +133,7 @@ for epoch in range(NUM_EPOCHS):
     print(f'Train Loss: {training_loss:.4f} | Acc: {training_accuracy:.2f}%')
     print(f'Val Loss: {validation_loss:.4f} | Acc: {validation_accuracy:.2f}%\n')
 
-    early_stopping, epochs_no_improve = Early_Stopping_Required(validation_loss)
+    #early_stopping, epochs_no_improve = Early_Stopping_Required(validation_loss)
     
     #SAVE THE BEST MODEL
     if validation_accuracy > best_accuracy:
