@@ -9,6 +9,7 @@ import torch
 import re
 
 
+
 SPECIAL_TOKENS = ['<pad>', '<sos>', '<eos>', '<unk>']
 PAD_INDEX = 0
 SOS_INDEX = 1
