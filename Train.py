@@ -9,13 +9,14 @@ from sklearn.metrics import accuracy_score, classification_report
 
 
 #HYPERPARMETER TUNING
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 DROP_OUT = 0.5 #ONLY NECESSARY IF USING A STACKED LSTM
 EMBEDDING_DIM = 128 #SIZE OF THE VECTOR FOR EACH EMBEDDING
 HIDDEN_SIZE = 128 #NUMBER OF FEATURES FOR THE HIDDEN STATE
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.001
 NUM_EPOCHS = 10
-NUM_RECURRENT_LAYERS = 2 #CREATES A STACKED LSTM IF >1. 
+NUM_RECURRENT_LAYERS = 2 #CREATES A STACKED LSTM IF >1.
+WEIGHT_DECAY = 1e-5 #L2 REGULARIZATION
 
 
 #GET DATA FROM PICKLE JAR
@@ -39,7 +40,7 @@ validation_loader = DataLoader(dataset=validation_data, batch_size=BATCH_SIZE, s
 test_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=True)
 
 lstm = LSTM(
-    dropout = None, #DROP_OUT, CHANGE IN LSTM.PY
+    dropout = DROP_OUT, #CHANGE IN LSTM.PY
     embedding_dim = EMBEDDING_DIM,
     hidden_size = HIDDEN_SIZE,
     num_recurrent_layers = NUM_RECURRENT_LAYERS,
@@ -48,9 +49,9 @@ lstm = LSTM(
 ).to(device)
 
 nn.Module.compile(lstm) #SHOULD MAKE COMPUTATION FASTER
-nn.utils.clip_grad_norm_(lstm.parameters(), max_norm=1)
-loss_fn = nn.CrossEntropyLoss()#weight=torch.tensor([1.0, 2.0])
-optimizer = torch.optim.Adam(lstm.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
+loss_fn = nn.CrossEntropyLoss()
+nn.utils.clip_grad_norm_(lstm.parameters(), max_norm=1.0)
+optimizer = torch.optim.Adam(lstm.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 best_accuracy = 0
 
 

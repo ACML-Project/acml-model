@@ -41,7 +41,7 @@ def Preprocess_Text(text):
             if word not in stop_words:
                processed_words.append(lemmatizer.lemmatize(word))
 
-        #ADD END-OF-SENTENCE MARKERS
+        #ADD START- AND END-OF-SENTENCE MARKERS
         processed_words = processed_words + [ SPECIAL_TOKENS[EOS_INDEX] ]
         
         for word in processed_words:

@@ -31,7 +31,7 @@ def Remove_Empty_Text(dataset):
     for i, row in dataset.iterrows():
         if row['text'].strip() == "": empty.append(i)
 
-    return dataset.drop(empty, axis='index')
+    return dataset.drop(empty, axis='index').reset_index()
    
 
 #WE'RE USING A 60-20-20 SPLIT
