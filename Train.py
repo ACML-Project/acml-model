@@ -4,12 +4,12 @@ from Preprocessing import Load_Data, Create_Readable_Text
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
-from sklearn.metrics import accuracy_score, classification_report
-
+from sklearn.metrics import classification_report
+from Graph import plot_training
 
 #HYPERPARMETER TUNING
-BATCH_SIZE = 32
-#DROP_OUT = 0.5 #ONLY NECESSARY IF USING A STACKED LSTM
+BATCH_SIZE = 32 #number of training samples used in forward/backward pass through the network
+DROP_OUT = 0.5 #randomly disregard nodes
 EMBEDDING_DIM = 128 #SIZE OF THE VECTOR FOR EACH EMBEDDING
 HIDDEN_SIZE = 128 #NUMBER OF FEATURES FOR THE HIDDEN STATE
 LEARNING_RATE = 0.005
@@ -30,13 +30,19 @@ inputs = torch.tensor(encoded_data, dtype = torch.long)
 
 dataset = TensorDataset(inputs, labels)
 training_data, validation_data, test_data = Split_Dataset(dataset)
-device = torch.device(1 if torch.cuda.is_available() else 'cpu')
+
+#if a graphics card is available, we use that. otherwise, stick to cpu.
+# device = torch.device(1 if torch.cuda.is_available() else 'cpu')
+device = torch.device(0 if torch.cuda.is_available() else 'cpu')
 
 #DATALOADERS MAKE IT EASIER TO LOAD AND PROCESS LARGE DATASETS IN PARALLEL
 training_loader = DataLoader(dataset=training_data, batch_size=BATCH_SIZE, shuffle=True)
+training_loader = DataLoader(dataset=training_data, batch_size=BATCH_SIZE, shuffle=True)
 validation_loader = DataLoader(dataset=validation_data, batch_size=BATCH_SIZE, shuffle=True)
 test_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=True)
+test_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=True)
 
+#initialise LSTM
 lstm = LSTM(
     dropout = None, #DROP_OUT, CHANGE IN LSTM.PY
     embedding_dim = EMBEDDING_DIM,
@@ -51,6 +57,11 @@ loss_fn = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(lstm.parameters(), lr = LEARNING_RATE)
 best_accuracy = 0
 
+#for graphing
+train_loss_list = []
+val_loss_list = []
+train_acc_list =  []
+val_acc_list =    []
 
 #TRAINING AND VALIDATION     
 for epoch in range(NUM_EPOCHS):
@@ -63,6 +74,7 @@ for epoch in range(NUM_EPOCHS):
     for inputs, labels in training_loader:
 
         inputs, labels = inputs.to(device), labels.to(device)
+        #get input layer dimension, set to buffer size
         buffer_size = inputs.size(0)
         
         hidden_state = torch.zeros(NUM_RECURRENT_LAYERS, buffer_size, HIDDEN_SIZE).to(device)
@@ -129,15 +141,46 @@ for epoch in range(NUM_EPOCHS):
     print(f'Train Loss: {training_loss:.4f} | Acc: {training_accuracy:.2f}%')
     print(f'Val Loss: {validation_loss:.4f} | Acc: {validation_accuracy:.2f}%\n')
     
+    #saving results for graphing
+    train_loss_list.append(round(training_loss,4))
+    val_loss_list.append(round(validation_loss,4))
+    train_acc_list.append(round(training_accuracy,4))
+    val_acc_list.append(round(validation_accuracy,4))
+    
     #SAVE THE BEST MODEL
     if validation_accuracy > best_accuracy:
         best_accuracy = validation_accuracy
         torch.save(lstm.state_dict(), 'best_model.pth')
         print("New best model\n")
 
-
 #FINAL EVALUATION AND CLASSIFICATION REPORT
 print("Training complete!")
 print(f"Best Validation Accuracy: {best_accuracy:.2f}%")
 print("\nClassification Report:")
 print(classification_report(all_labels, all_predictions, target_names=['Fake', 'Real']))
+
+all_predictions = []
+all_labels = []
+
+with torch.no_grad():
+    for inputs, labels in test_loader:
+        
+        inputs, labels = inputs.to(device), labels.to(device)
+        buffer_size = inputs.size(0)
+        
+        hidden_state = torch.zeros(NUM_RECURRENT_LAYERS, buffer_size, HIDDEN_SIZE).to(device)
+        cell_state = torch.zeros(NUM_RECURRENT_LAYERS, buffer_size, HIDDEN_SIZE).to(device)
+        
+        outputs, _, _ = lstm(inputs, hidden_state, cell_state)
+        outputs = outputs[:, -1, :]
+        
+        _, predicted = torch.max(outputs.data, 1)
+        
+        all_predictions.extend(predicted.cpu().numpy())
+        all_labels.extend(labels.cpu().numpy())
+
+print("Test Classification Report:")
+print(classification_report(all_labels, all_predictions, target_names=['Fake', 'Real']))
+
+#plots results
+plot_training(NUM_EPOCHS, train_loss_list, val_loss_list, train_acc_list, val_acc_list)

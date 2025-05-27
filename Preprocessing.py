@@ -9,7 +9,8 @@ import torch
 import re
 
 
-SPECIAL_TOKENS = ['<pad>', '<sos>', '<eos>', '<unk>']
+MAX_ARTICLE_LEN = 512 #HYPERPARMETER TUNING
+SPECIAL_TOKENS = ['<pad>', '<sos>', '<eos>', '<unk>'] #padding, start-of-sentence, end-of-sentence, unkowns
 PAD_INDEX = 0
 SOS_INDEX = 1
 EOS_INDEX = 2
@@ -22,7 +23,9 @@ MIN_VOCAB_FREQ = 3
 
 def Preprocess_Text(text):
 
+    #breaks words down to "base" form. groups words that are semantically equivalent.
     lemmatizer = WordNetLemmatizer()
+    #stop words - have little meaning in the data, so we'll remove them.
     stop_words = set(stopwords.words('english'))
     processed_text = []
 
