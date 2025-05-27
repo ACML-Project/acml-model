@@ -9,7 +9,7 @@ from Graph import plot_training
 
 #HYPERPARMETER TUNING
 BATCH_SIZE = 32 #number of training samples used in forward/backward pass through the network
-DROP_OUT = 0.5 #randomly disregard nodes
+#DROP_OUT = 0.5 #ONLY NECESSARY IF USING A STACKED LSTM
 EMBEDDING_DIM = 128 #SIZE OF THE VECTOR FOR EACH EMBEDDING
 HIDDEN_SIZE = 128 #NUMBER OF FEATURES FOR THE HIDDEN STATE
 LEARNING_RATE = 0.005
@@ -37,9 +37,7 @@ device = torch.device(0 if torch.cuda.is_available() else 'cpu')
 
 #DATALOADERS MAKE IT EASIER TO LOAD AND PROCESS LARGE DATASETS IN PARALLEL
 training_loader = DataLoader(dataset=training_data, batch_size=BATCH_SIZE, shuffle=True)
-training_loader = DataLoader(dataset=training_data, batch_size=BATCH_SIZE, shuffle=True)
 validation_loader = DataLoader(dataset=validation_data, batch_size=BATCH_SIZE, shuffle=True)
-test_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=True)
 test_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=True)
 
 #initialise LSTM
