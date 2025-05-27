@@ -7,18 +7,18 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.metrics import accuracy_score, classification_report
 
 
-# IMPROVED HYPERPARAMETERS
-BATCH_SIZE = 64  # Increased for more stable gradients
-DROP_OUT = 0.2  # Enable dropout for regularization
-EMBEDDING_DIM = 256  # Increased for richer representations
-HIDDEN_SIZE = 256  # Increased for more complex patterns
-INITIAL_LEARNING_RATE = 0.001  # Lowered for more stable training
-NUM_EPOCHS = 25  # Increased with early stopping
-NUM_RECURRENT_LAYERS = 2  # Stacked LSTM for deeper learning
-WEIGHT_DECAY = 1e-4  # L2 regularization
-MAX_GRAD_NORM = 1.0  # Gradient clipping
-PATIENCE = 5  # Early stopping patience
-MIN_DELTA = 0.001  # Minimum improvement threshold
+
+BATCH_SIZE = 128
+DROP_OUT = 0.3  
+EMBEDDING_DIM = 256  # Much smaller embedding dimension
+HIDDEN_SIZE = 128
+INITIAL_LEARNING_RATE = 0.002  # Slightly higher LR for smaller model
+NUM_EPOCHS = 15  # Reasonable number of epochs
+NUM_RECURRENT_LAYERS = 1  # Single layer to reduce computation
+WEIGHT_DECAY = 1e-3  # Slightly higher weight decay for regularization
+MAX_GRAD_NORM = 0.5  # Gradient clipping
+PATIENCE = 3  # Earlier stopping to save time
+MIN_DELTA = 0.005  # Larger threshold for early stopping
 
 
 # GET DATA FROM PICKLE JAR
