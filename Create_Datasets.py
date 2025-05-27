@@ -46,11 +46,23 @@ def Save_Merged_Data(dataset):
 
 
 #LOADS DATA FROM PKL FILES
+#pickles is funny with versions, this seems to be an okay workaround
 def Load_Merged_Data():
-    with open(f'{PKL_PATH}Merged.pkl', 'rb') as f:
-        merged_dataset = pickle.load(f)
+    try:
+        with open(f'{PKL_PATH}Merged.pkl', 'rb') as f:
+            return pickle.load(f)
+    except Exception as e:
+        print(f"Failed to load pickle file: {e}")
+        print("Making Merged.pkl from raw CSVs")
 
-    return merged_dataset
+        dataset = Merge_Datasets()
+        dataset = Remove_Empty_Text(dataset)
+
+        Save_Merged_Data(dataset)
+        dataset.to_csv(f"{READABLES}Merged.csv", index=False)
+
+        return dataset
+
 
 
 def Create_Dataset():
