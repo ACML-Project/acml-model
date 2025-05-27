@@ -47,9 +47,6 @@ def Preprocess_Text(text):
         for word in processed_words:
             processed_text.append(word)
  
-    #TRUNCATES TEXT TO MAX LENGTH
-    del processed_text[MAX_ARTICLE_LEN:]
-    
     return processed_text
 
 
@@ -130,9 +127,18 @@ def Preprocess_Data():
     nltk.download('punkt')
     
     dataset = Load_Merged_Data()
-    processed_data = dataset['text'].apply(Preprocess_Text)
+
+    #PROCESS ALL RELEVANT PARTS OF THE DATASET
+    processed_title = dataset['title'].apply(Preprocess_Text)
+    processed_text = dataset['text'].apply(Preprocess_Text)
+    processed_subject = dataset['subject'].apply(Preprocess_Text)
+
+    #ADD PARTS TOGETHER AND TRUNCATE TO MAX LENGTH
+    processed_data = [ processed_title[i] + processed_subject[i] + processed_text[i] for i in range(len(dataset))]
+    for data in processed_data: del data[MAX_ARTICLE_LEN:]
+
     vocab = Build_Vocab(processed_data)
-    processed_data = Add_Padding(processed_data)
+    processed_text = Add_Padding(processed_data)
     encoded_data = Encode_Data(processed_data, vocab)
 
     Save_Data(encoded_data, vocab)
