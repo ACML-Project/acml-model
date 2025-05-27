@@ -12,7 +12,7 @@ from sklearn.metrics import accuracy_score, classification_report
 BATCH_SIZE = 16
 DROP_OUT = 0.5 #ONLY NECESSARY IF USING A STACKED LSTM
 EMBEDDING_DIM = 128 #SIZE OF THE VECTOR FOR EACH EMBEDDING
-HIDDEN_SIZE = 128 #NUMBER OF FEATURES FOR THE HIDDEN STATE
+HIDDEN_SIZE = 256 #NUMBER OF FEATURES FOR THE HIDDEN STATE
 LEARNING_RATE = 0.001
 NUM_EPOCHS = 10
 NUM_RECURRENT_LAYERS = 2 #CREATES A STACKED LSTM IF >1.
@@ -24,7 +24,7 @@ unprocessed_data = Load_Merged_Data()
 encoded_data, vocab = Load_Data()
 
 #IF YOU WANT TO READ DATA
-Create_Readable_Text(unprocessed=unprocessed_data, encoding=encoded_data, vocab=vocab)
+#Create_Readable_Text(unprocessed=unprocessed_data, encoding=encoded_data, vocab=vocab)
 
 #CREATES TENSORS FOR THE BINARY LABELS (FAKE/REAL NEWS) AND FOR THE ENCODED TEXT
 labels = torch.tensor(unprocessed_data['label'].values, dtype = torch.long)
