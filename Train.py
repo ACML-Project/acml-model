@@ -1,11 +1,11 @@
-from Create_Datasets import Split_Dataset, Load_Merged_Data
-#from Helper_Functions import Early_Stopping_Required
+from Create_Datasets import Load_Merged_Data
+from Graphs import Plot_Training
 from LSTM import LSTM
 from Preprocessing import Load_Data, Create_Readable_Text
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
-from sklearn.metrics import accuracy_score, classification_report
 
 
 #HYPERPARMETER TUNING
@@ -13,31 +13,44 @@ BATCH_SIZE = 16
 DROP_OUT = 0.5 #ONLY NECESSARY IF USING A STACKED LSTM
 EMBEDDING_DIM = 128 #SIZE OF THE VECTOR FOR EACH EMBEDDING
 HIDDEN_SIZE = 128 #NUMBER OF FEATURES FOR THE HIDDEN STATE
-LEARNING_RATE = 0.001
-NUM_EPOCHS = 10
+NUM_EPOCHS = 20
 NUM_RECURRENT_LAYERS = 2 #CREATES A STACKED LSTM IF >1.
+MAX_GRAD_NORM = 1.0 # Gradient clipping
+PATIENCE = 3  # Earlier stopping to save time
 WEIGHT_DECAY = 1e-5 #L2 REGULARIZATION
+learning_rate = 0.001 #NO LONGER A CONSTANT, WILL CHANGE AS MODEL TRAINS
 
 
-#GET DATA FROM PICKLE JAR
-unprocessed_data = Load_Merged_Data() 
-encoded_data, vocab = Load_Data()
+def Create_Dataloaders(datasets, labels):
 
+    tensor_datasets = []
+
+    for i in range(3):
+
+        #CREATES TENSORS FOR THE BINARY LABELS (FAKE/REAL NEWS) AND FOR THE ENCODED TEXT
+        label = torch.tensor(labels[i], dtype=torch.long)
+        inputs = torch.tensor(datasets[i], dtype=torch.long)
+
+        tensor_dataset = TensorDataset(inputs, label)
+        tensor_datasets.append(tensor_dataset)
+
+    #DATALOADERS MAKE IT EASIER TO LOAD AND PROCESS LARGE DATASETS IN PARALLEL
+    training_loader = DataLoader(dataset=tensor_datasets[0], batch_size=BATCH_SIZE, shuffle=True)
+    validation_loader = DataLoader(dataset=tensor_datasets[1], batch_size=BATCH_SIZE, shuffle=True)
+    test_loader = DataLoader(dataset=tensor_datasets[2], batch_size=BATCH_SIZE, shuffle=True)
+    
+    return training_loader, validation_loader, test_loader
+
+
+#GET DATA FROM PICKLE JAR 
+encoded_data, _, labels, vocab = Load_Data()
+ 
 #IF YOU WANT TO READ DATA
-#Create_Readable_Text(unprocessed=unprocessed_data, encoding=encoded_data, vocab=vocab)
+unprocessed_data = Load_Merged_Data()
+Create_Readable_Text(unprocessed_data, encoded_data, labels, vocab)
 
-#CREATES TENSORS FOR THE BINARY LABELS (FAKE/REAL NEWS) AND FOR THE ENCODED TEXT
-labels = torch.tensor(unprocessed_data['label'].values, dtype = torch.long)
-inputs = torch.tensor(encoded_data, dtype = torch.long)
-
-dataset = TensorDataset(inputs, labels)
-training_data, validation_data, test_data = Split_Dataset(dataset)
 device = torch.device(1 if torch.cuda.is_available() else 'cpu')
-
-#DATALOADERS MAKE IT EASIER TO LOAD AND PROCESS LARGE DATASETS IN PARALLEL
-training_loader = DataLoader(dataset=training_data, batch_size=BATCH_SIZE, shuffle=True)
-validation_loader = DataLoader(dataset=validation_data, batch_size=BATCH_SIZE, shuffle=True)
-test_loader = DataLoader(dataset=test_data, batch_size=BATCH_SIZE, shuffle=True)
+training_loader, validation_loader, test_loader = Create_Dataloaders(encoded_data, labels)
 
 lstm = LSTM(
     dropout = DROP_OUT, #CHANGE IN LSTM.PY
@@ -49,13 +62,33 @@ lstm = LSTM(
 ).to(device)
 
 nn.Module.compile(lstm) #SHOULD MAKE COMPUTATION FASTER
+nn.utils.clip_grad_norm_(lstm.parameters(), max_norm=MAX_GRAD_NORM)
 loss_fn = nn.CrossEntropyLoss()
-nn.utils.clip_grad_norm_(lstm.parameters(), max_norm=1.0)
-optimizer = torch.optim.Adam(lstm.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-best_accuracy = 0
+optimizer = torch.optim.Adam(lstm.parameters(), lr=learning_rate, weight_decay=WEIGHT_DECAY)
+
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer, 
+    mode ='max', 
+    patience = PATIENCE, 
+    factor=0.5
+)
+
+early_stopping_counter = 0
+best_validation_accuracy = 0
+
+#for graphing
+train_loss_list = []
+val_loss_list = []
+train_acc_list =  []
+val_acc_list =    []
 
 
-#TRAINING AND VALIDATION     
+print("Starting training with improved hyperparameters...")
+print(f"Model parameters: Hidden = {HIDDEN_SIZE}, Layers = {NUM_RECURRENT_LAYERS}, Dropout = {DROP_OUT}")
+print(f"Training parameters: LR = {learning_rate}, Batch = {BATCH_SIZE}, Max Epochs = {NUM_EPOCHS}")
+print("-" * 70)
+
+#TRAINING AND VALIDATION
 for epoch in range(NUM_EPOCHS):
 
     lstm.train()
@@ -74,7 +107,7 @@ for epoch in range(NUM_EPOCHS):
         #FOWARD PASS
         optimizer.zero_grad()
         outputs, hidden, memory = lstm(inputs, hidden_state, cell_state)
-        outputs = outputs[:, -1, :]  #TAKE THE LAST OUTPUT FOR CLASSIFICATION
+        outputs = outputs[:, -1, :] #TAKE THE LAST OUTPUT FOR CLASSIFICATION
         
         loss = loss_fn(outputs, labels)
         loss.backward()
@@ -88,6 +121,7 @@ for epoch in range(NUM_EPOCHS):
         #HOW MANY OF THE LSTM'S PREDICTIONS MATCH THE TRUE LABELS FOR FAKE/REAL NEWS
         training_correct += (predicted == labels).sum().item()
     
+
     #VALIDATION PHASE
     lstm.eval()
     validation_loss = 0
@@ -97,8 +131,6 @@ for epoch in range(NUM_EPOCHS):
     #FOR CLASSIFICATION REPORT
     all_predictions = []
     all_labels = []
-
-    epochs_no_improve = 0
     
     with torch.no_grad():
         for inputs, labels in validation_loader:
@@ -130,23 +162,87 @@ for epoch in range(NUM_EPOCHS):
     validation_loss = validation_loss/len(validation_loader)
     validation_accuracy = 100*validation_correct/validation_total
 
+    # UPDATE LEARNING RATE BASED ON VALIDATION PERFORMANCE
+    scheduler.step(validation_accuracy)
+    learning_rate = optimizer.param_groups[0]['lr']
+
     print(f'Epoch {epoch + 1}/{NUM_EPOCHS}:')
     print(f'Train Loss: {training_loss:.4f} | Acc: {training_accuracy:.2f}%')
     print(f'Val Loss: {validation_loss:.4f} | Acc: {validation_accuracy:.2f}%\n')
 
-    #early_stopping, epochs_no_improve = Early_Stopping_Required(validation_loss)
+    #saving results for graphing
+    train_loss_list.append(round(training_loss,4))
+    val_loss_list.append(round(validation_loss,4))
+    train_acc_list.append(round(training_accuracy,4))
+    val_acc_list.append(round(validation_accuracy,4))
     
     #SAVE THE BEST MODEL
-    if validation_accuracy > best_accuracy:
-        best_accuracy = validation_accuracy
+    if validation_accuracy > best_validation_accuracy:
+
+        best_validation_accuracy = validation_accuracy
+        early_stopping_counter = 0
         torch.save(lstm.state_dict(), 'best_model.pth')
-        print("New best model\n")
+        print("✓ New best model saved! \n")
 
+    else:
+        early_stopping_counter += 1
+        print(f"No improvement ({early_stopping_counter}/{PATIENCE})")
+        
+        if early_stopping_counter >= PATIENCE:
+            print(f"\nEarly stopping triggered after {epoch + 1} epochs")
+            print(f"Best validation accuracy: {best_validation_accuracy:.2f}%")
+            break
     
+    print("-" * 50)
 
 
-#FINAL EVALUATION AND CLASSIFICATION REPORT
-print("Training complete!")
-print(f"Best Validation Accuracy: {best_accuracy:.2f}%")
-print("\nClassification Report:")
+print("\n" + "="*70)
+print("TRAINING COMPLETE!")
+print("="*70)
+print(f"Best Validation Accuracy: {best_validation_accuracy:.2f}%")
+print(f"Final Learning Rate: {optimizer.param_groups[0]['lr']:.6f}")
+
+# LOAD BEST MODEL FOR FINAL EVALUATION
+lstm.load_state_dict(torch.load('best_model.pth'))
+print("\nLoaded best model for final evaluation")
+
+print("\nFinal Classification Report (Validation Set):")
 print(classification_report(all_labels, all_predictions, target_names=['Fake', 'Real']))
+
+#EVALUATE ON TEST SET
+print("\n" + "-"*50)
+print("EVALUATING ON TEST SET:")
+print("-"*50)
+
+lstm.eval()
+test_predictions = []
+test_labels = []    
+
+
+with torch.no_grad():
+    for inputs, labels in test_loader:
+    
+        inputs, labels = inputs.to(device), labels.to(device)
+        buffer_size = inputs.size(0)
+        
+        hidden_state = torch.zeros(NUM_RECURRENT_LAYERS, buffer_size, HIDDEN_SIZE).to(device)
+        cell_state = torch.zeros(NUM_RECURRENT_LAYERS, buffer_size, HIDDEN_SIZE).to(device)
+        
+        outputs, _, _ = lstm(inputs, hidden_state, cell_state)
+        outputs = outputs[:, -1, :]
+        
+        _, predicted = torch.max(outputs.data, 1)
+        
+        test_predictions.extend(predicted.cpu().numpy())
+        test_labels.extend(labels.cpu().numpy())
+
+
+test_accuracy = 100 * accuracy_score(test_labels, test_predictions)
+print(f"Test Accuracy: {test_accuracy:.2f}%")
+print("\nTest Set Classification Report:")
+print(classification_report(test_labels, test_predictions, target_names=['Fake', 'Real']))
+print("\nTest Set Confusion Matrix:")
+print(confusion_matrix(test_labels, test_predictions))
+
+#plots results
+Plot_Training(len(train_loss_list), train_loss_list, val_loss_list, train_acc_list, val_acc_list)

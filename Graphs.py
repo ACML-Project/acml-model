@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
-from Preprocessing import Load_Data
 import random
 import re
 import subprocess
@@ -134,35 +133,54 @@ def Subject_Label_Graph(dataset):
     return
 
 
+def Plot_Training(NUM_EPOCHS, train_loss_list, val_loss_list, train_acc_list, val_acc_list, save_path='graph.png'):
+    
+    #listing epochs
+    epochs = list(range(1, NUM_EPOCHS+1))
+    
+    #plotting loss between training and validation data
+    plt.figure(figsize=(10, 4))
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, train_loss_list, label='Train Loss')
+    plt.plot(epochs, val_loss_list, label='Val Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Loss over Epochs')
+    plt.legend()
+
+    #plotting accuracy between training and validation data
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, train_acc_list, label='Train Acc')
+    plt.plot(epochs, val_acc_list, label='Val Acc')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy (%)')
+    plt.title('Accuracy over Epochs')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.show()
+
+
 dataset = Load_Merged_Data()
+#unpadded_dataset = Load_Untruncated_Data()
 
 #BASIC ASS GRAPHS
-Label_Frequency_Graph(dataset)
-Subject_Frequency_Graph(dataset)
+#Label_Frequency_Graph(dataset)
+#Subject_Frequency_Graph(dataset)
 
 #COOLER GRAPH
-Subject_Label_Graph(dataset)
-
-
-
-
-#def small_loader():
- #   return _orig().sample(frac=DATA_FRAC, random_state=42)
-
-
-#Create_Datasets.Load_Merged_Data = small_loader
-#Preprocessing.Load_Merged_Data = small_loader
+#Subject_Label_Graph(dataset)
 
 
 # ——————————————————————
-# Compute 75th & 95th percentiles on 10% subsample
+# Compute 75th & 95th percentiles
 # ——————————————————————
-#df = Create_Datasets.Load_Merged_Data()
-#lengths = [len(Preprocessing.Preprocess_Text(t)) for t in df['text']]
+#lengths = [len(article) for article in untruncated_dataset]
 #lo, hi = map(int, pd.Series(lengths).quantile([0.75, 0.95]))
 #print(f"Tuning MAX_ARTICLE_LEN between {lo} and {hi} ({TRIALS} trials, {EPOCHS} epoch each)")
 
-#best = (None, -1.0)
+best = (None, -1.0)
 
 #for i in range(1, TRIALS + 1):
  #   L = random.randint(lo, hi)
@@ -600,98 +618,3 @@ Subject_Label_Graph(dataset)
 # # 5) Restore original setting
 # Preprocessing.MAX_ARTICLE_LEN = _OLD_MAX
 # evaluate_max_len.py
-
-# import random
-# import tempfile
-# import subprocess
-# import re
-# import os
-# import sys
-# import pandas as pd
-
-# import Preprocessing
-# import Create_Datasets
-
-# # ——————————————————————
-# # 1) 1% loader for speed
-# # ——————————————————————
-# DATA_FRAC = 0.01
-# _orig = Create_Datasets.Load_Merged_Data
-# def small_loader():
-#     return _orig().sample(frac=DATA_FRAC, random_state=42)
-# Create_Datasets.Load_Merged_Data = small_loader
-# Preprocessing.Load_Merged_Data = small_loader
-
-# # ——————————————————————
-# # 2) Your top‐3 length candidates
-# # ——————————————————————
-# candidates = [334, 491, 601]
-# print(f"Evaluating MAX_ARTICLE_LEN candidates: {candidates}")
-
-# # ——————————————————————
-# # 3) Helper to run Train.py for exactly 1 epoch
-# # ——————————————————————
-# def run_once(max_len):
-#     # rebuild pickles at this max_len
-#     Preprocessing.MAX_ARTICLE_LEN = max_len
-#     Preprocessing.Preprocess_Data()
-
-#     # patch Train.py to load 1% data & run 1 epoch
-#     with open("Train.py") as f:
-#         orig = f.read()
-
-#     header = f"""
-# import os, sys
-# sys.path.insert(0, os.getcwd())
-
-# # force 1% loader
-# import Create_Datasets
-# _orig = Create_Datasets.Load_Merged_Data
-# def small_cd(): return _orig().sample(frac={DATA_FRAC}, random_state=42)
-# Create_Datasets.Load_Merged_Data = small_cd
-
-# import Preprocessing
-# Preprocessing.Load_Merged_Data = small_cd
-# Preprocessing.Load_Data       = lambda: (
-#     __import__('pickle').load(open(Preprocessing.PKL_PATH+'encoded_data.pkl','rb')),
-#     __import__('pickle').load(open(Preprocessing.PKL_PATH+'vocab.pkl','rb'))
-# )
-
-# # only 1 epoch
-# NUM_EPOCHS = 1
-# """
-
-#     tmp = tempfile.mktemp(prefix="tune_", suffix=".py")
-#     with open(tmp, "w") as f:
-#         f.write(header + orig)
-
-#     proc = subprocess.run([sys.executable, tmp],
-#                           capture_output=True, text=True)
-#     os.remove(tmp)
-
-#     # parse “Best Validation Accuracy”
-#     for ln in reversed(proc.stdout.splitlines()):
-#         m = re.match(r"Best Validation Accuracy:\s*([0-9.]+)%", ln)
-#         if m:
-#             return float(m.group(1))
-
-#     raise RuntimeError("Validation accuracy not found")
-
-# # ——————————————————————
-# # 4) Loop over candidates
-# # ——————————————————————
-# best_len, best_acc = None, -1.0
-# for L in candidates:
-#     print(f"\n→ Testing max_len = {L}")
-#     acc = run_once(L)
-#     print(f"   Validation Accuracy = {acc:.2f}%")
-#     if acc > best_acc:
-#         best_len, best_acc = L, acc
-
-# # ——————————————————————
-# # 5) Report your winner
-# # ——————————————————————
-# print(f"\n Best MAX_ARTICLE_LEN = {best_len} → {best_acc:.2f}%")
-
-
-
