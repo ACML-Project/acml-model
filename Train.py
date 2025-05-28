@@ -16,7 +16,7 @@ HIDDEN_SIZE = 128 #NUMBER OF FEATURES FOR THE HIDDEN STATE
 NUM_EPOCHS = 20
 NUM_RECURRENT_LAYERS = 2 #CREATES A STACKED LSTM IF >1.
 MAX_GRAD_NORM = 1.0 # Gradient clipping
-PATIENCE = 3  # Earlier stopping to save time
+PATIENCE = 5  # Earlier stopping to save time
 WEIGHT_DECAY = 1e-5 #L2 REGULARIZATION
 learning_rate = 0.001 #NO LONGER A CONSTANT, WILL CHANGE AS MODEL TRAINS
 
@@ -43,7 +43,7 @@ def Create_Dataloaders(datasets, labels):
 
 
 #GET DATA FROM PICKLE JAR 
-encoded_data, _, labels, vocab = Load_Data()
+encoded_data, labels, vocab = Load_Data()
  
 #IF YOU WANT TO READ DATA
 unprocessed_data = Load_Merged_Data()

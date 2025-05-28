@@ -116,16 +116,26 @@ def Encode_Data(processed_data, vocab):
 
 
 #SAVES DATA AS PKL FILE SO WE DON'T HAVE TO KEEP REDOING ENCODINGS AND VOCABS
-def Save_Data(encoded_data, untruncated_data, labels, vocab):
+def Save_Data(encoded_data, labels, vocab):
 
     with open(f'{PKL_PATH}vocab.pkl', 'wb') as f:
         pickle.dump(vocab, f)
     with open(f'{PKL_PATH}labels.pkl', 'wb') as f:
         pickle.dump(labels, f)
-    with open(f'{PKL_PATH}untruncated_data.pkl', 'wb') as f:
-        pickle.dump(untruncated_data, f)
     with open(f'{PKL_PATH}encoded_data.pkl', 'wb') as f:
         pickle.dump(encoded_data, f)
+
+
+def Save_Get_Untruncated(untruncated_data):
+
+    if untruncated_data:
+        with open(f'{PKL_PATH}untruncated_data.pkl', 'wb') as f:
+            pickle.dump(untruncated_data, f)
+
+    else:
+        with open(f'{PKL_PATH}untruncated_data.pkl', 'rb') as f:
+            untruncated_data = pickle.load(f)
+        return untruncated_data
 
 
 #LOADS DATA FROM PKL FILES
@@ -133,14 +143,12 @@ def Load_Data():
 
     with open(f'{PKL_PATH}encoded_data.pkl', 'rb') as f:
         encoded_data = pickle.load(f)
-    with open(f'{PKL_PATH}untruncated_data.pkl', 'rb') as f:
-        untruncated_data = pickle.load(f)
     with open(f'{PKL_PATH}labels.pkl', 'rb') as f:
         labels = pickle.load(f)
     with open(f'{PKL_PATH}vocab.pkl', 'rb') as f:
         vocab = pickle.load(f)
 
-    return encoded_data, untruncated_data, labels, vocab
+    return encoded_data, labels, vocab
 
 
 def Preprocess_Data():
@@ -164,6 +172,7 @@ def Preprocess_Data():
 
     processed_data = [processed_training, processed_validation, processed_test]
     untruncated_data = [ article for dataset in processed_data for article in dataset ]
+    Save_Get_Untruncated(untruncated_data)
 
     #BUILD VOCAB ON TRAINING SET
     vocab = Build_Vocab(processed_training)
@@ -172,7 +181,7 @@ def Preprocess_Data():
     processed_data = Add_Padding(processed_data)
     encoded_data = Encode_Data(processed_data, vocab)
 
-    Save_Data(encoded_data, untruncated_data, labels, vocab)
+    Save_Data(encoded_data, labels, vocab)
 
 
 #CREATES OUTPUT FILES TO VIEW DATA AND VOCAB. GOOD LUCK OPENING IT - IT'S HUGE

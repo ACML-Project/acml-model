@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+from Preprocessing import Save_Get_Untruncated
 import random
 import re
 import subprocess
@@ -163,7 +164,7 @@ def Plot_Training(NUM_EPOCHS, train_loss_list, val_loss_list, train_acc_list, va
 
 
 dataset = Load_Merged_Data()
-#unpadded_dataset = Load_Untruncated_Data()
+untruncated_dataset = Save_Get_Untruncated(False)
 
 #BASIC ASS GRAPHS
 #Label_Frequency_Graph(dataset)
@@ -176,9 +177,9 @@ dataset = Load_Merged_Data()
 # ——————————————————————
 # Compute 75th & 95th percentiles
 # ——————————————————————
-#lengths = [len(article) for article in untruncated_dataset]
-#lo, hi = map(int, pd.Series(lengths).quantile([0.75, 0.95]))
-#print(f"Tuning MAX_ARTICLE_LEN between {lo} and {hi} ({TRIALS} trials, {EPOCHS} epoch each)")
+lengths = [len(article) for article in untruncated_dataset]
+lo, hi = map(int, pd.Series(lengths).quantile([0.9, 0.95]))
+print(f"Tuning MAX_ARTICLE_LEN between {lo} and {hi} ({TRIALS} trials, {EPOCHS} epoch each)")
 
 best = (None, -1.0)
 
