@@ -15,7 +15,7 @@ class LSTM(nn.Module):
         
         self.lstm = nn.LSTM(
             batch_first = True,
-            #dropout = dropout,
+            dropout = dropout,
             hidden_size = hidden_size,
             input_size = embedding_dim, #NEEDS TO MATCH EMBEDDING VECTOR'S DIMENSIONS
             num_layers = num_recurrent_layers 

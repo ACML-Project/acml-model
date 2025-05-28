@@ -1,6 +1,6 @@
 import pandas as pd
 import pickle
-from torch.utils.data import random_split
+from sklearn.model_selection import train_test_split
 
 
 #THE FOLDERS WHERE OUR DATASET WILL BE SAVED
@@ -19,6 +19,7 @@ def Merge_Datasets():
     true_news['label'] = 1
     
     dataset = pd.concat([fake_news, true_news], axis=0)
+    dataset = dataset.drop_duplicates(subset=['text'])
 
     #RETURN SHUFFLED DATASET
     return dataset.sample(frac=1).reset_index(drop=True)
@@ -31,12 +32,15 @@ def Remove_Empty_Text(dataset):
     for i, row in dataset.iterrows():
         if row['text'].strip() == "": empty.append(i)
 
-    return dataset.drop(empty, axis='index')
+    return dataset.drop(empty, axis='index').reset_index()
    
 
 #WE'RE USING A 60-20-20 SPLIT
 def Split_Dataset(dataset):
-    return random_split(dataset, [0.6, 0.2, 0.2])
+    
+    training_data, temp_data = train_test_split(dataset, test_size=0.4, random_state=42, stratify=dataset['label'])
+    validation_data, test_data = train_test_split(temp_data, test_size=0.5, random_state=42, stratify=temp_data['label'])
+    return training_data, validation_data, test_data
 
    
 #SAVES DATA AS PKL FILE SO WE DON'T HAVE TO KEEP MERGING AND REMOVING EMPTY TEXT
@@ -49,7 +53,6 @@ def Save_Merged_Data(dataset):
 def Load_Merged_Data():
     with open(f'{PKL_PATH}Merged.pkl', 'rb') as f:
         merged_dataset = pickle.load(f)
-
     return merged_dataset
 
 

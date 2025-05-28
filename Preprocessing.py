@@ -1,23 +1,29 @@
-from Create_Datasets import Load_Merged_Data, PKL_PATH, READABLES
+from Create_Datasets import Load_Merged_Data, Split_Dataset, PKL_PATH, READABLES
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import sent_tokenize, word_tokenize
-import pandas as pd
 import pickle
-import torch
 import re
 
 
-SPECIAL_TOKENS = ['<pad>', '<sos>', '<eos>', '<unk>']
+SPECIAL_TOKENS = ['<pad>', '<eos>', '<unk>']
 PAD_INDEX = 0
-SOS_INDEX = 1
-EOS_INDEX = 2
-UNK_INDEX = 3
+EOS_INDEX = 1
+UNK_INDEX = 2
 
 #HYPERPARMETER TUNING
-MAX_ARTICLE_LEN = 512
+MAX_ARTICLE_LEN = 256
 MIN_VOCAB_FREQ = 3
+
+
+def Get_Labels(datasets):
+
+    labels = []
+    for dataset in datasets:
+        labels.append(dataset['label'].values)
+
+    return labels
 
 
 def Preprocess_Text(text):
@@ -45,14 +51,11 @@ def Preprocess_Text(text):
                processed_words.append(lemmatizer.lemmatize(word))
 
         #ADD START- AND END-OF-SENTENCE MARKERS
-        processed_words = [ SPECIAL_TOKENS[SOS_INDEX] ] + processed_words + [ SPECIAL_TOKENS[EOS_INDEX] ]
+        processed_words = processed_words + [ SPECIAL_TOKENS[EOS_INDEX] ]
         
         for word in processed_words:
             processed_text.append(word)
  
-    #TRUNCATES TEXT TO MAX LENGTH
-    del processed_text[MAX_ARTICLE_LEN:]
-    
     return processed_text
 
 
@@ -77,11 +80,15 @@ def Build_Vocab(tokenized_text):
 
 def Add_Padding(processed_data):
 
-    for article in processed_data:
-        n = MAX_ARTICLE_LEN - len(article)
+    for dataset in processed_data:
+        for article in dataset:
 
-        for i in range(n):
-            article.append(SPECIAL_TOKENS[PAD_INDEX])
+            #TRUNCATE ARTICLE TO MAX LENGTH IF NECESSARY
+            del article[MAX_ARTICLE_LEN:]
+            n = MAX_ARTICLE_LEN - len(article)
+
+            for i in range(n):
+                article.append(SPECIAL_TOKENS[PAD_INDEX])
 
     return processed_data
 
@@ -93,36 +100,55 @@ def Encode_Data(processed_data, vocab):
 
     encodings = []
 
-    for article in processed_data:
-        encoded_article = []
+    for dataset in processed_data:
+        encoded_dataset = []
 
-        for token in article:
-            encoded_article.append( vocab.get(token, UNK_INDEX) )
-        encodings.append(encoded_article)
+        for article in dataset:
+            encoded_article = []
+
+            for token in article:
+                encoded_article.append( vocab.get(token, UNK_INDEX) )
+
+            encoded_dataset.append(encoded_article)
+        encodings.append(encoded_dataset)
 
     return encodings
 
 
 #SAVES DATA AS PKL FILE SO WE DON'T HAVE TO KEEP REDOING ENCODINGS AND VOCABS
-def Save_Data(encoded_data, vocab):
+def Save_Data(encoded_data, labels, vocab):
 
     with open(f'{PKL_PATH}vocab.pkl', 'wb') as f:
         pickle.dump(vocab, f)
-
+    with open(f'{PKL_PATH}labels.pkl', 'wb') as f:
+        pickle.dump(labels, f)
     with open(f'{PKL_PATH}encoded_data.pkl', 'wb') as f:
         pickle.dump(encoded_data, f)
+
+
+def Save_Get_Untruncated(untruncated_data):
+
+    if untruncated_data:
+        with open(f'{PKL_PATH}untruncated_data.pkl', 'wb') as f:
+            pickle.dump(untruncated_data, f)
+
+    else:
+        with open(f'{PKL_PATH}untruncated_data.pkl', 'rb') as f:
+            untruncated_data = pickle.load(f)
+        return untruncated_data
 
 
 #LOADS DATA FROM PKL FILES
 def Load_Data():
 
+    with open(f'{PKL_PATH}encoded_data.pkl', 'rb') as f:
+        encoded_data = pickle.load(f)
+    with open(f'{PKL_PATH}labels.pkl', 'rb') as f:
+        labels = pickle.load(f)
     with open(f'{PKL_PATH}vocab.pkl', 'rb') as f:
         vocab = pickle.load(f)
 
-    with open(f'{PKL_PATH}encoded_data.pkl', 'rb') as f:
-        encoded_data = pickle.load(f)
-
-    return encoded_data, vocab
+    return encoded_data, labels, vocab
 
 
 def Preprocess_Data():
@@ -132,24 +158,43 @@ def Preprocess_Data():
     nltk.download('wordnet')
     nltk.download('punkt')
     
+    #LOAD AND SPLIT DATASET
     dataset = Load_Merged_Data()
-    processed_data = dataset['text'].apply(Preprocess_Text)
-    vocab = Build_Vocab(processed_data)
+    training_data, validation_data, test_data = Split_Dataset(dataset)
+
+    #SAVE THE LABELS FOR EACH DATASET
+    labels = Get_Labels([ training_data, validation_data, test_data ])
+
+    #PROCESS THE DATASETS
+    processed_training = training_data['text'].apply(Preprocess_Text)
+    processed_validation = validation_data['text'].apply(Preprocess_Text)
+    processed_test = test_data['text'].apply(Preprocess_Text)
+
+    processed_data = [processed_training, processed_validation, processed_test]
+    untruncated_data = [ article for dataset in processed_data for article in dataset ]
+    Save_Get_Untruncated(untruncated_data)
+
+    #BUILD VOCAB ON TRAINING SET
+    vocab = Build_Vocab(processed_training)
+
+    #PAD AND ENCODE DATA
     processed_data = Add_Padding(processed_data)
     encoded_data = Encode_Data(processed_data, vocab)
 
-    Save_Data(encoded_data, vocab)
+    Save_Data(encoded_data, labels, vocab)
 
 
 #CREATES OUTPUT FILES TO VIEW DATA AND VOCAB. GOOD LUCK OPENING IT - IT'S HUGE
-def Create_Readable_Text(unprocessed, vocab, encoding):
+def Create_Readable_Text(unprocessed, encoding, labels, vocab):
 
     with open(f"{READABLES}unprocessed.txt", "w") as f:
         print(unprocessed, file=f)
-    with open(f"{READABLES}vocab.txt", "w") as f:
-        print(vocab, file=f)
     with open(f"{READABLES}encoded_data.txt", "w") as f:
         print(encoding, file=f)
+    with open(f"{READABLES}labels.txt", "w") as f:
+        print(labels, file=f)
+    with open(f"{READABLES}vocab.txt", "w") as f:
+        print(vocab, file=f)
 
 
 #RUN THIS IF YOU DON'T HAVE THE PKL FILES FOR ENCODINGS AND VOCAB
