@@ -1,8 +1,8 @@
 from Create_Datasets import Load_Merged_Data
-from Graphs import Plot_Training
+from Graphs import Plot_Training, Plot_Confusion_Matrix, Plot_Histo, Plot_tsne
 from LSTM import LSTM
 from Preprocessing import Load_Data, Create_Readable_Text
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics import accuracy_score, auc, classification_report, confusion_matrix, roc_curve
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -49,7 +49,7 @@ encoded_data, labels, vocab = Load_Data()
 unprocessed_data = Load_Merged_Data()
 Create_Readable_Text(unprocessed_data, encoded_data, labels, vocab)
 
-device = torch.device(1 if torch.cuda.is_available() else 'cpu')
+device = torch.device(0 if torch.cuda.is_available() else 'cpu')
 training_loader, validation_loader, test_loader = Create_Dataloaders(encoded_data, labels)
 
 lstm = LSTM(
@@ -217,7 +217,8 @@ print("-"*50)
 lstm.eval()
 test_predictions = []
 test_labels = []    
-
+test_probs = [] #collects the probability of the positive class for each sample.
+test_embeddings = [] 
 
 with torch.no_grad():
     for inputs, labels in test_loader:
@@ -231,18 +232,25 @@ with torch.no_grad():
         outputs, _, _ = lstm(inputs, hidden_state, cell_state)
         outputs = outputs[:, -1, :]
         
+        probs = torch.softmax(outputs, dim=1)
+        test_probs.extend(probs[:, 1].cpu().numpy()) 
+        
         _, predicted = torch.max(outputs.data, 1)
         
         test_predictions.extend(predicted.cpu().numpy())
         test_labels.extend(labels.cpu().numpy())
 
+        test_embeddings.extend(outputs.cpu().numpy()) 
 
 test_accuracy = 100 * accuracy_score(test_labels, test_predictions)
 print(f"Test Accuracy: {test_accuracy:.2f}%")
 print("\nTest Set Classification Report:")
 print(classification_report(test_labels, test_predictions, target_names=['Fake', 'Real']))
 print("\nTest Set Confusion Matrix:")
-print(confusion_matrix(test_labels, test_predictions))
-
+cm = confusion_matrix(test_labels, test_predictions)
+print(cm)
+Plot_Confusion_Matrix(cm)
+Plot_Histo(test_probs, test_labels)
+Plot_tsne(test_embeddings, test_labels)
 #plots results
 Plot_Training(len(train_loss_list), train_loss_list, val_loss_list, train_acc_list, val_acc_list)
