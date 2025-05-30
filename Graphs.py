@@ -166,13 +166,13 @@ def Plot_Histo(test_probs, test_labels, save_path='Basic Graphs/histo.png'):
     plt.show()
 
     
-def Plot_Confusion_Matrix(cm, save_path='Basic Graphs/confusion.png'):
+def Plot_Confusion_Matrix(cm, title, save_path):
     # Plot confusion matrix
     plt.figure(figsize=(6,5))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Fake', 'Real'], yticklabels=['Fake', 'Real'])
     plt.xlabel('Predicted Label')
     plt.ylabel('True Label')
-    plt.title('Confusion Matrix - Test Dataset')
+    plt.title('Confusion Matrix - ' + title)
     plt.savefig(save_path)
     plt.show()
 
@@ -239,6 +239,7 @@ def Violin_BoxPlot_Article_Length(lengths, save_path):
 
 dataset = Load_Merged_Data()
 untruncated_dataset = Save_Get_Untruncated(False)
+article_lengths = [ len(article) for article in untruncated_dataset ]
 
 #BASIC ASS GRAPHS
 #Label_Frequency_Graph(dataset)
@@ -246,6 +247,4 @@ untruncated_dataset = Save_Get_Untruncated(False)
 
 #COOLER GRAPH
 #Subject_Label_Graph(dataset)
-
-article_lengths = [ len(article) for article in untruncated_dataset ]
 #Violin_BoxPlot_Article_Length(article_lengths, 'Basic Graphs/Article length.png')

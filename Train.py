@@ -16,7 +16,7 @@ HIDDEN_SIZE = 128 #NUMBER OF FEATURES FOR THE HIDDEN STATE
 NUM_EPOCHS = 20
 NUM_RECURRENT_LAYERS = 2 #CREATES A STACKED LSTM IF >1.
 MAX_GRAD_NORM = 1.0 # Gradient clipping
-PATIENCE = 5  # Earlier stopping to save time
+PATIENCE = 3  # Earlier stopping to save time
 WEIGHT_DECAY = 1e-5 #L2 REGULARIZATION
 learning_rate = 0.001 #NO LONGER A CONSTANT, WILL CHANGE AS MODEL TRAINS
 
@@ -202,6 +202,9 @@ print("="*70)
 print(f"Best Validation Accuracy: {best_validation_accuracy:.2f}%")
 print(f"Final Learning Rate: {optimizer.param_groups[0]['lr']:.6f}")
 
+cmVald = confusion_matrix(all_labels, all_predictions)
+Plot_Confusion_Matrix(cmVald, 'Validation Dataset', 'Basic Graphs/confusionV.png')
+
 # LOAD BEST MODEL FOR FINAL EVALUATION
 lstm.load_state_dict(torch.load('best_model.pth'))
 print("\nLoaded best model for final evaluation")
@@ -249,7 +252,7 @@ print(classification_report(test_labels, test_predictions, target_names=['Fake',
 print("\nTest Set Confusion Matrix:")
 cm = confusion_matrix(test_labels, test_predictions)
 print(cm)
-Plot_Confusion_Matrix(cm)
+Plot_Confusion_Matrix(cm, 'Test Dataset', 'Basic Graphs/confusion.png')
 Plot_Histo(test_probs, test_labels)
 Plot_tsne(test_embeddings, test_labels)
 #plots results
